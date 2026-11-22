@@ -9,7 +9,7 @@
 
 #include <libfdt.h>
 
-#define MAC_ADDR_SIZE		6
+#include <lk2nd/mac.h>
 
 /* 2 hexadecimal chars per byte plus separators and null terminator */
 #define MAC_ADDR_STR_SIZE	(MAC_ADDR_SIZE * 3)
@@ -23,6 +23,13 @@ static const char * const bd_compatibles[] = {
 
 static uint8_t mac_addr[MAC_ADDR_SIZE];
 static uint8_t bd_addr[MAC_ADDR_SIZE];
+static bool mac_from_device, generated;
+
+void lk2nd_mac_set_wifi(const uint8_t mac[MAC_ADDR_SIZE])
+{
+	memcpy(mac_addr, mac, MAC_ADDR_SIZE);
+	mac_from_device = true;
+}
 
 static bool generate_addrs(void)
 {
@@ -30,7 +37,7 @@ static bool generate_addrs(void)
 	char *start, *end;
 	unsigned long sn;
 
-	if (mac_addr[0])
+	if (generated)
 		return true;
 
 	/* Take the last 8 chars (4 bytes hexadecimal) from the serial number */
@@ -44,12 +51,14 @@ static bool generate_addrs(void)
 	}
 
 	/* locally administrated pool */
-	mac_addr[0] = 0x02;
-	mac_addr[1] = 0x00;
-	mac_addr[2] = sn >> 24;
-	mac_addr[3] = sn >> 16;
-	mac_addr[4] = sn >> 8;
-	mac_addr[5] = sn;
+	if (!mac_from_device) {
+		mac_addr[0] = 0x02;
+		mac_addr[1] = 0x00;
+		mac_addr[2] = sn >> 24;
+		mac_addr[3] = sn >> 16;
+		mac_addr[4] = sn >> 8;
+		mac_addr[5] = sn;
+	}
 
 	/*
 	 * BD address is encoded in little endian format (reversed),
@@ -61,6 +70,7 @@ static bool generate_addrs(void)
 	bd_addr[2] = sn >> 16;
 	bd_addr[1] = sn >> 8;
 	bd_addr[0] = sn ^ 1;
+	generated = true;
 
 	dprintf(SPEW, "Generated MAC address %02X:%02X:%02X:%02X:%02X:%02X, "
 		"BD address %02X:%02X:%02X:%02X:%02X:%02X\n",
