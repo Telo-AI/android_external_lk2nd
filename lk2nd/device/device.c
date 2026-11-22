@@ -17,6 +17,10 @@
 #include "device.h"
 #include "sdhc.h"
 
+#if WITH_DEV_PMIC_PM8X41
+#include <pm8x41_hw.h>
+#endif
+
 struct lk2nd_device lk2nd_dev;
 
 /**
@@ -241,12 +245,19 @@ unsigned char *lk2nd_device_update_cmdline(const char *cmdline, enum boot_type b
 			new_cmdline = concat_cmdline(new_cmdline, "androidboot.force_normal_boot=1");
 		}
 #endif
-		if (lk2nd_dev.offmode_charging && (boot_type & BOOT_ANDROID) &&
-		    !(boot_type & BOOT_ANDROID_RECOVERY) &&
-		    !lk2nd_cmdline_scan_arg(lk2nd_dev.cmdline, "androidboot.mode",
-					    mode, sizeof(mode)) &&
-		    target_pause_for_battery_charge())
-			new_cmdline = concat_cmdline(new_cmdline, "androidboot.mode=charger");
+		if (lk2nd_dev.offmode_charging) {
+			if ((boot_type & BOOT_ANDROID) &&
+			    !(boot_type & BOOT_ANDROID_RECOVERY) &&
+			    !lk2nd_cmdline_scan_arg(lk2nd_dev.cmdline, "androidboot.mode",
+						    mode, sizeof(mode)) &&
+			    target_pause_for_battery_charge())
+				new_cmdline = concat_cmdline((const char *)new_cmdline,
+							     "androidboot.mode=charger");
+#if WITH_DEV_PMIC_PM8X41
+			/* The flag outlives the reset that set it; a later power-on would read as warm */
+			pm8x41_reg_write(PON_WARMBOOT_STATUS1, 0);
+#endif
+		}
 		return new_cmdline;
 	}
 #endif
