@@ -17,6 +17,7 @@
 	compatible = "nuwa,nb2";
 
 	lk2nd,dtb-files = "sda450-nuwa-nb2";
+	lk2nd,offmode-charging;
 
 	mfdata {
 		compatible = "nuwa,mfdata";
