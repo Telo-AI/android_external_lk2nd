@@ -25,7 +25,7 @@ get_version_string() {
 	fi
 
 	head_rev=$(git rev-parse --short HEAD)
-	head_date=$(git log -1 --format=%cd --date=format:"%Y%m%d")
+	head_date=$(git log -1 --no-show-signature --format=%cd --date=format:"%Y%m%d")
 	last_tag=$(git tag --sort=-taggerdate --merged | head -n1)
 	if [ -z "$last_tag" ]
 	then
