@@ -5,11 +5,13 @@
 #include <dev_tree.h>
 #include <fastboot.h>
 #include <string.h>
+#include <target.h>
 
 #include <libfdt.h>
 #include <lk2nd/device.h>
 #include <lk2nd/init.h>
 #include <lk2nd/panel.h>
+#include <lk2nd/util/cmdline.h>
 #include <lk2nd/util/lkfdt.h>
 
 #include "device.h"
@@ -150,6 +152,10 @@ static void parse_dtb(const void *dtb)
 	if (len >= 0)
 		lk2nd_dev.single_key = true;
 
+	val = fdt_getprop(dtb, node, "lk2nd,offmode-charging", &len);
+	if (len >= 0)
+		lk2nd_dev.offmode_charging = true;
+
 	val = fdt_stringlist_get(dtb, node, "lk2nd,menu-key-strings", 0, &len);
 	if (val && len > 0)
 		lk2nd_dev.menu_keys.navigate = strndup(val, len);
@@ -227,12 +233,20 @@ unsigned char *lk2nd_device_update_cmdline(const char *cmdline, enum boot_type b
 #if WITH_LK2ND_DEVICE_2ND
 	unsigned char *new_cmdline = NULL;
 	if (lk2nd_dev.cmdline) {
+		char mode[16];
+
 		new_cmdline = concat_cmdline(cmdline, lk2nd_dev.cmdline);
 #ifdef ANDROID_USES_RECOVERY_AS_BOOT
 		if ((boot_type & BOOT_ANDROID) && !(boot_type & BOOT_ANDROID_RECOVERY)) {
 			new_cmdline = concat_cmdline(new_cmdline, "androidboot.force_normal_boot=1");
 		}
 #endif
+		if (lk2nd_dev.offmode_charging && (boot_type & BOOT_ANDROID) &&
+		    !(boot_type & BOOT_ANDROID_RECOVERY) &&
+		    !lk2nd_cmdline_scan_arg(lk2nd_dev.cmdline, "androidboot.mode",
+					    mode, sizeof(mode)) &&
+		    target_pause_for_battery_charge())
+			new_cmdline = concat_cmdline(new_cmdline, "androidboot.mode=charger");
 		return new_cmdline;
 	}
 #endif

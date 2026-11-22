@@ -227,6 +227,17 @@ This setting is only applicable to the following platforms:
 Note: For platforms where this is applicable, this property **must** be set
 in the device's lk2nd DTS for SD card boot to work.
 
+### Off-mode charging
+
+Some stock bootloaders boot Android fully when plugging in a charger powers the
+device on, so Android never shows its charging screen. With this property,
+lk2nd adds `androidboot.mode=charger` itself on such a power-on, unless the
+stock bootloader already set a mode:
+
+```
+	lk2nd,offmode-charging;
+```
+
 ## Additional drivers
 
 lk2nd provides a set of optional nodes, following a simple driver

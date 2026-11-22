@@ -33,6 +33,7 @@ struct lk2nd_device {
 	const char *dtb_compatible;
 	const char *const *dtbfiles;
 	bool single_key;
+	bool offmode_charging;
 	struct lk2nd_menu_keys menu_keys;
 	uint32_t sd_mmc_slot_number;
 
