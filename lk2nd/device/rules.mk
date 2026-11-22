@@ -19,6 +19,7 @@ OBJS += \
 	$(LOCAL_DIR)/panel.o \
 	$(LOCAL_DIR)/keys.o \
 	$(LOCAL_DIR)/leds.o \
+	$(LOCAL_DIR)/nuwa-mfdata.o \
 	$(LOCAL_DIR)/regulator-fixed.o \
 	$(LOCAL_DIR)/regulator-ldo.o \
 	$(LOCAL_DIR)/sdhc.o \
