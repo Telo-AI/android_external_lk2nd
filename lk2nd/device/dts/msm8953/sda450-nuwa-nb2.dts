@@ -18,6 +18,11 @@
 
 	lk2nd,dtb-files = "sda450-nuwa-nb2";
 
+	mfdata {
+		compatible = "nuwa,mfdata";
+		partition = "rawinfo";
+	};
+
 	panel {
 		compatible = "nuwa,nb2-panel", "lk2nd,panel";
 
