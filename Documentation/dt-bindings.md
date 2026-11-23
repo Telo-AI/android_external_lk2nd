@@ -231,9 +231,12 @@ in the device's lk2nd DTS for SD card boot to work.
 
 Some stock bootloaders boot Android fully when plugging in a charger powers the
 device on, so Android never shows its charging screen. With this property,
-lk2nd adds `androidboot.mode=charger` itself on such a power-on, unless the
-stock bootloader already set a mode. It also clears the PMIC's warm boot flag,
-so that powering off with a charger attached counts as a cold boot too:
+lk2nd adds `androidboot.mode=charger` itself when the PMIC reports that a
+charger powered the device on, unless the stock bootloader already set a mode.
+It doesn't use the usual warm boot check, because some PMICs log every PS_HOLD
+shutdown as a warm reset. Instead, lk2nd sets the PS_HOLD reset to a hard reset
+before booting the OS, so that a reset while the OS runs doesn't pass for a
+charger power-on:
 
 ```
 	lk2nd,offmode-charging;

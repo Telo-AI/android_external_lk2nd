@@ -18,6 +18,7 @@
 #include "sdhc.h"
 
 #if WITH_DEV_PMIC_PM8X41
+#include <pm8x41.h>
 #include <pm8x41_hw.h>
 #endif
 
@@ -223,6 +224,22 @@ static unsigned char *concat_cmdline(const char *a, const char *b)
 	return r;
 }
 
+#if WITH_DEV_PMIC_PM8X41
+#define WARM_RESET_PS_HOLD	BIT(1)
+
+static bool offmode_charger_poweron(void)
+{
+	uint8_t pon = pm8x41_reg_read(PON_PON_REASON1);
+
+	if (!(pon & (PON1 | USB_CHG | DC_CHG)) || (pon & (HARD_RST | KPDPWR_N)))
+		return false;
+
+	/* PM8953 logs a PS_HOLD shutdown as a warm reset too */
+	return !(pm8x41_reg_read(PON_WARMBOOT_STATUS1) & ~WARM_RESET_PS_HOLD) &&
+	       !pm8x41_reg_read(PON_WARMBOOT_STATUS2);
+}
+#endif
+
 unsigned char *lk2nd_device_update_cmdline(const char *cmdline, enum boot_type boot_type)
 {
 #ifdef LK2ND_COMPATIBLE
@@ -237,27 +254,28 @@ unsigned char *lk2nd_device_update_cmdline(const char *cmdline, enum boot_type b
 #if WITH_LK2ND_DEVICE_2ND
 	unsigned char *new_cmdline = NULL;
 	if (lk2nd_dev.cmdline) {
-		char mode[16];
-
 		new_cmdline = concat_cmdline(cmdline, lk2nd_dev.cmdline);
 #ifdef ANDROID_USES_RECOVERY_AS_BOOT
 		if ((boot_type & BOOT_ANDROID) && !(boot_type & BOOT_ANDROID_RECOVERY)) {
 			new_cmdline = concat_cmdline(new_cmdline, "androidboot.force_normal_boot=1");
 		}
 #endif
+#if WITH_DEV_PMIC_PM8X41
 		if (lk2nd_dev.offmode_charging) {
+			char mode[16];
+
 			if ((boot_type & BOOT_ANDROID) &&
 			    !(boot_type & BOOT_ANDROID_RECOVERY) &&
 			    !lk2nd_cmdline_scan_arg(lk2nd_dev.cmdline, "androidboot.mode",
 						    mode, sizeof(mode)) &&
-			    target_pause_for_battery_charge())
+			    offmode_charger_poweron())
 				new_cmdline = concat_cmdline((const char *)new_cmdline,
 							     "androidboot.mode=charger");
-#if WITH_DEV_PMIC_PM8X41
-			/* The flag outlives the reset that set it; a later power-on would read as warm */
-			pm8x41_reg_write(PON_WARMBOOT_STATUS1, 0);
-#endif
+
+			/* A reset while the OS runs must not pass for a charger power-on */
+			pm8x41_reset_configure(PON_PSHOLD_HARD_RESET);
 		}
+#endif
 		return new_cmdline;
 	}
 #endif
